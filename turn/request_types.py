@@ -228,6 +228,49 @@ class TurnMedia(TurnRequest):
 
         return response.json()["media"][0]["id"]
 
+    def send_media(
+        self, whatsapp_id, file_path, content_type, media_type, caption=None
+    ):
+        """
+        Send media (image/video/document/audio) to a WhatsApp user.
+        Uploads media first, then sends it using the correct message type.
+        """
+
+        try:
+            with open(file_path, "rb") as f:
+                media_id = self.upload_media(f, content_type)
+        except Exception as e:
+            raise Exception(f"Media upload failed: {str(e)}")
+        if not media_id:
+            raise Exception("Media upload did not return a media ID.")
+
+        payload = {
+            "to": whatsapp_id,
+            "recipient_type": "individual",
+            "type": media_type,
+            media_type: {"id": media_id},
+        }
+
+        if caption and media_type in ["image", "video", "document"]:
+            payload[media_type]["caption"] = caption
+
+        response = self._post(data=payload)
+        status = response.status_code
+
+        if status == requests.codes.not_found:
+            error = self.get_error(response)
+            raise WhatsAppContactNotFoundError(error["details"])
+        elif status == requests.codes.bad_request:
+            error = self.get_error(response)
+            raise WhatsAppBadRequestError(error["details"])
+        elif status == requests.codes.forbidden:
+            raise WhatsAppAuthenticationError
+        elif "errors" in response.json():
+            error = self.get_error(response)
+            raise WhatsAppUnknownError(error["details"])
+
+        return response.json()["messages"][0]["id"]
+
 
 class TurnBusinessManagementRequest:
     base_url = "https://whatsapp.turn.io/v3.3"

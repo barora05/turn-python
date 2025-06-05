@@ -1,7 +1,19 @@
+from unittest.mock import mock_open
+
 from turn import TurnClient
 from turn.request_types import TurnRequest
 import responses
 from mock import patch
+
+
+class MockResponse:
+    def __init__(self, json_data, status_code):
+        self._json = json_data
+        self.status_code = status_code
+
+    def json(self):
+        return self._json
+
 
 @responses.activate
 def test_send_message_success():
@@ -42,3 +54,24 @@ def test_upload_media_overrides_content_type():
         data = call_args[1]["data"]
         assert headers["Content-Type"] == "audio/ogg"
         assert data == content
+
+
+@patch("turn.request_types.requests.request")
+@patch("builtins.open", new_callable=mock_open, read_data=b"fake-binary-data")
+def test_send_media_success(mock_file, mock_request):
+    mock_request.side_effect = [
+        MockResponse({"media": [{"id": "mock-media-id"}]}, 200),
+        MockResponse({"messages": [{"id": "mock-message-id"}]}, 200),
+    ]
+
+    client = TurnClient(token="dummy-token")
+    result = client.media.send_media(
+        whatsapp_id="123456",
+        file_path="somefile.jpg",
+        content_type="image/jpeg",
+        media_type="image",
+        caption="Hello world!",
+    )
+    assert result == "mock-message-id"
+    mock_file.assert_called_once_with("somefile.jpg", "rb")
+    assert mock_request.call_count == 2
