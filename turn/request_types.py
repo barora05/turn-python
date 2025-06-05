@@ -228,19 +228,17 @@ class TurnMedia(TurnRequest):
 
         return response.json()["media"][0]["id"]
 
-    def send_media(
-        self, whatsapp_id, file_path, content_type, media_type, caption=None
-    ):
+    def send_media(self, whatsapp_id, file, content_type, media_type, caption=None):
         """
         Send media (image/video/document/audio) to a WhatsApp user.
         Uploads media first, then sends it using the correct message type.
         """
 
         try:
-            with open(file_path, "rb") as f:
-                media_id = self.upload_media(f, content_type)
+            media_id = self.upload_media(file, content_type)
         except Exception as e:
             raise Exception(f"Media upload failed: {str(e)}")
+
         if not media_id:
             raise Exception("Media upload did not return a media ID.")
 
