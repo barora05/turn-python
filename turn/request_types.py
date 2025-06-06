@@ -39,7 +39,7 @@ class TurnRequest:
     def _post(self, data=None):
         return self._make_request(
             method="POST",
-            url=self.url,
+            url="https://whatsapp.turn.io/v1/messages",
             data=json.dumps(data) if data is not None else None,
         )
 
@@ -89,14 +89,35 @@ class TurnMessages(TurnRequest):
     endpoint_name = "messages"
 
     def send_text(self, whatsapp_id, text):
-        response = self._post(
-            data={
-                "to": whatsapp_id,
-                "recipient_type": "individual",
-                "type": "text",
-                "text": {"body": text},
-            }
-        )
+        payload = {
+            "to": whatsapp_id,
+            "recipient_type": "individual",
+            "type": "text",
+            "text": {"body": text},
+        }
+        return self._send_message(payload)
+
+    def send_media(self, whatsapp_id, file, content_type, media_type, caption=None):
+        """
+        Send media (image/video/document/audio) to a WhatsApp user.
+        Uploads media first, then sends it using the correct message type.
+        """
+        media_id = TurnMedia(self.token).upload_media(file, content_type)
+
+        payload = {
+            "to": whatsapp_id,
+            "recipient_type": "individual",
+            "type": media_type,
+            media_type: {"id": media_id},
+        }
+
+        if caption and media_type in ["image", "video", "document"]:
+            payload[media_type]["caption"] = caption
+
+        return self._send_message(payload)
+
+    def _send_message(self, payload):
+        response = self._post(data=payload)
         status = response.status_code
 
         # Check known possible errors, given the little information we receive
@@ -227,47 +248,6 @@ class TurnMedia(TurnRequest):
         )
 
         return response.json()["media"][0]["id"]
-
-    def send_media(self, whatsapp_id, file, content_type, media_type, caption=None):
-        """
-        Send media (image/video/document/audio) to a WhatsApp user.
-        Uploads media first, then sends it using the correct message type.
-        """
-
-        try:
-            media_id = self.upload_media(file, content_type)
-        except Exception as e:
-            raise Exception(f"Media upload failed: {str(e)}")
-
-        if not media_id:
-            raise Exception("Media upload did not return a media ID.")
-
-        payload = {
-            "to": whatsapp_id,
-            "recipient_type": "individual",
-            "type": media_type,
-            media_type: {"id": media_id},
-        }
-
-        if caption and media_type in ["image", "video", "document"]:
-            payload[media_type]["caption"] = caption
-
-        response = self._post(data=payload)
-        status = response.status_code
-
-        if status == requests.codes.not_found:
-            error = self.get_error(response)
-            raise WhatsAppContactNotFoundError(error["details"])
-        elif status == requests.codes.bad_request:
-            error = self.get_error(response)
-            raise WhatsAppBadRequestError(error["details"])
-        elif status == requests.codes.forbidden:
-            raise WhatsAppAuthenticationError
-        elif "errors" in response.json():
-            error = self.get_error(response)
-            raise WhatsAppUnknownError(error["details"])
-
-        return response.json()["messages"][0]["id"]
 
 
 class TurnBusinessManagementRequest:

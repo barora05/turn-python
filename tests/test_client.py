@@ -68,7 +68,7 @@ def test_send_media_success(mock_request):
     client = TurnClient(token="dummy-token")
     fake_file = BytesIO(b"fake-binary-data")
 
-    result = client.media.send_media(
+    result = client.messages.send_media(
         whatsapp_id="123456",
         file=fake_file,
         content_type="image/jpeg",
