@@ -39,7 +39,7 @@ class TurnRequest:
     def _post(self, data=None):
         return self._make_request(
             method="POST",
-            url="https://whatsapp.turn.io/v1/messages",
+            url=self.url,
             data=json.dumps(data) if data is not None else None,
         )
 
