@@ -29,11 +29,11 @@
    
     # Send a media file
     with open("example.jpg", "rb") as file:
-    turn_client.messages.send_media(
-        whatsapp_id=wa_id,
-        file=file,
-        content_type="image/jpeg",
-        media_type="image",
-        caption="Here’s an image"
-    )
+        turn_client.messages.send_media(
+            whatsapp_id=wa_id,
+            file=file,
+            content_type="image/jpeg",
+            media_type="image",
+            caption="Here’s an image"
+        )
     ```
