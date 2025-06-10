@@ -220,18 +220,6 @@ class TurnMessages(TurnRequest):
         # TODO handle malformed response data
         return response.json()["messages"][0]["id"]
 
-    def send_audio(self, whatsapp_id, media_id):
-        """Sends an audio message to the user. You need to first upload the media using
-        `client.media.upload_media(..)`
-        """
-        data = {
-            "to": whatsapp_id,
-            "recipient_type": "individual",
-            "type": "audio",
-            "audio": {"id": media_id},
-        }
-        return self._post(data=data)
-
 
 class TurnMedia(TurnRequest):
     endpoint_name = "media"
